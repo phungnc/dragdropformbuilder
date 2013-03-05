@@ -24,6 +24,7 @@
 			_.bindAll( this, 'duplicateItem' );
 			//
 			this.collection.fetch();
+			//this.render();
 		},
 		//
 		render: function() {
