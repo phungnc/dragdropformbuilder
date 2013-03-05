@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  	<title>Guest Management Application</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/bootstrap-responsive.min.css">
+    <link rel="stylesheet" href="assets/css/bootstrap-editable.css">
+    <link rel="stylesheet" href="assets/fontawesome/css/font-awesome.min.css">
+	<!-- custom style -->
+	 <style>
+
+	  [draggable] {
+	  -moz-user-select: none;
+	  -khtml-user-select: none;
+	  -webkit-user-select: none;
+	  user-select: none;
+	  cursor: move;
+    }
+
+	  .none{display: none;}
+	  span.require{ color:#c83025;font-size:15px; }
+	  .dragging{background-color: white; border: 1px solid red}
+
+    .item-editor{
+      -webkit-box-shadow: 1px 0 10px 1px rgba(0,0,0,0.3);
+      -moz-box-shadow: 1px 0 10px 1px rgba(0,0,0,0.3);
+      box-shadow: 1px 0 10px 1px rgba(0,0,0,0.3);
+      z-index: 1;
+      cursor: default; 
+    }	 
+    .form-div{
+      padding: 1px;
+      position: relative;
+    }
+    .form-div:hover{
+      
+      -moz-user-select: none;
+      -khtml-user-select: none;
+      -webkit-user-select: none;
+      user-select: none;
+      cursor: move; 
+    }
+    .topright-actions {
+      /*display: none;
+      font-size: 12px;*/
+
+      position: absolute;
+      right: 10px;
+      top: 1em;
+      z-index: 4;
+    }
+
+   </style> 
+  
+  </head>
+  <body screen_capture_injected="true" data-twttr-rendered="true">
+   
+    <!-- Nav Bar -->
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn pull-left" href="#"><i class="icon-chevron-left"></i>&nbsp;Add Entry</a>
+          <a class="btn pull-right" href="#">View Entry&nbsp;<i class="icon-chevron-right"></i></a>
+        </div>
+      <!-- /.container -->  
+      </div>
+    <!-- /navbar-inner -->  
+    </div>
+    <!-- /navbar -->
+	
+    <!-- main content -->
+    <div class="container">
+      <div class="row">
+        <div id="content"  class="span12">
+          <h3>Simple Backbone Form Builder with Drag-Drop</h3>
+		  
+          <form id="itemList" class="form-horizontal"></form>
+          <div class="span4">
+            <a id="addItem"  role="button" class="btn btn-primary">Add item</a>  
+          </div>
+		  
+        </div>
+      </div>
+    </div> 
+    <!-- /main content -->
+
+    <!-- addEditItemView  -->
+    <!--div id="addEditItemView" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="addEditItemViewLabel" aria-hidden="true">
+    </div-->
+    <!-- /addEditItemView  --> 
+<!-- button template -->
+<script type="text/template" id="actionBtnTemplate">
+  <div class="topright-actions">
+    <span><button id="editItem" type="button" class="btn btn-small" data-toggle="modal"><i class="icon-edit"></i></button ></span>
+    <span><button id="duplicateItem" class="btn btn-small" type="button"><i class="icon-plus"></i></button></span>
+    <span><button id="removeItem" class="btn btn-small" type="button"><i class="icon-trash"></i></button></span>
+  </div>
+</script>
+<!-- /button template -->
+
+<!-- Field Template     -->
+<script type="text/template" id="fieldTemplate">
+<div class ="control-group well">
+  <div class="span1"><h5><%= order %></h5></div>
+  <div class="span8">
+    <label class="control-label" for="inputLabel"><%= inputLabel %>&nbsp;<span class="require"><%= require === true ? "*" : "" %></span></label>
+    <div class="controls">
+    <% if(choices.length > 0) {
+      _.each(choices,function(choice){ %>
+        <label class="<%= fieldType %> inline">
+           <input type="<%= fieldType %>" name="<%= fieldType %>" id="inputLabel<%= choice.value %>" value="<%= choice.text %>"><%= choice.text%>
+        </label>
+     <% })
+    } else { %>
+    <input type="<%= fieldType %>" id="inputLabel" value="">
+    <% } %>
+    </div>
+  </div>    
+</div>
+</script>
+<!-- /. Field Template     -->
+
+<!-- Select Template     -->
+
+<script type="text/template" id="selectTemplate">
+<div class ="control-group well">
+  <div class="span1"><h5><%= order %></h5></div>
+  <div class="span8">
+    <label class="control-label" for="inputLabel"><%= inputLabel %>&nbsp;<span class="require"><%= require === true ? "*" : "" %></label>
+
+    <div class="controls">
+      <select id="<%= fieldType %>" name="<%= fieldType %>" >
+      <% if(choices) { 
+        _.each(choices,function(choice){ %>
+             <option value="<%= choice.value %>"><%= choice.text %></option>
+       <% })} %>
+      </select>  
+    </div>
+  </div>
+</div>  
+</script>
+<!-- data-target="#addEditItemView"  -->
+<!-- /. Select Template     -->
+<!--   Option Template -->
+ <script type="text/template" id="optionTemplate">
+
+ </script>
+<!--/. Option Template -->
+<!-- addEditItemTemplate Template  -->
+<script type="text/template" id="addEditItemTemplate">
+
+<div class="control-group well item-editor">
+  <div class="span1"><h5><%= order %></h5></div>
+  <div class="span8">
+      <form class="form-horizontal">
+            <div class="control-group">
+              <label class="control-label" for="inputLabel">Field title</label>
+              <div class="controls inputLabel">
+                <input id="inputLabel" name="inputLabel" type="text" value="<%= inputLabel !== "" ? inputLabel : "" %>" >
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="fieldtype">Field type</label>
+              <div class="controls fieldtype">
+                <select id="fieldType" name="fieldType">
+                  <option value="text" <%= fieldType === "text" ? "selected" : "" %>>Text Field</option>
+                  <option value="radio" <%= fieldType === "radio" ? "selected" : "" %>>Radio Button</option>
+                  <option value="checkbox" <%= fieldType === "checkbox" ? "selected" : "" %>>Check Box</option>
+                  <option value="select" <%= fieldType === "select" ? "selected" : "" %>>Select Box</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="choices">Choice</label>
+              <div class="controls choices">
+                <% if( choices.length > 1) { 
+                  _.each(choices,function(choice){ %>
+                       <input type="text" class="choice<%= choice.value %>" id="<%= choice.value %>" name="choices"  value="<%= choice.text %>">&nbsp;<button id="<%= choice.value %>" type="button" class="btn btn-small remove-choice"><i id="<%= choice.value %>" class="icon-remove-circle"></i></button><p></p>
+                      <% })
+                      } else { %>
+                      <input type="text" class="choice0" id="0" name="choices"  value="<%= choices[0].text %>">
+                      <% } %>
+                <span><button id="add-choice" type="button" class="btn btn-small add-choice">Add</button></span>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="inputRequire">Require</label>    
+              <div class="controls require">
+                <label class="checkbox">
+                  <input id="require" name="require" type="checkbox" value="true" <%= require === true ? "checked" : ""%>>
+                </label>
+                <button type="button" class="btn btn-primary done">Done</button>
+              </div>
+            </div>
+        </form>           
+  </div>
+</div>
+<div class="topright-actions">
+  <span><button id="closeEditItem" type="button" class="btn btn-small" data-toggle="modal"><i class="icon-edit"></i></button ></span>
+  <span><button id="duplicateItem" class="btn btn-small" type="button"><i class="icon-plus"></i></button></span>
+  <span><button id="removeItem" class="btn btn-small" type="button"><i class="icon-trash"></i></button></span>
+</div>        
+</script>
+<!-- addEditItemTemplate Template for text field type  -->
+<script type="text/template" id="addEditTextFieldTemplate">
+
+<div class="control-group well item-editor">
+  <div class="span1"><h5><%= order %></h5></div>
+  <div class="span8">
+      <form class="form-horizontal">
+            <div class="control-group">
+              <label class="control-label" for="inputLabel">Field title</label>
+              <div class="controls inputLabel">
+                <input id="inputLabel" name="inputLabel" type="text" value="<%= inputLabel !== "" ? inputLabel : "" %>" >
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="fieldtype">Field type</label>
+              <div class="controls fieldtype">
+                <select id="fieldType" name="fieldType">
+                  <option value="text" <%= fieldType === "text" ? "selected" : "" %>>Text Field</option>
+                  <option value="radio" <%= fieldType === "radio" ? "selected" : "" %>>Radio Button</option>
+                  <option value="checkbox" <%= fieldType === "checkbox" ? "selected" : "" %>>Check Box</option>
+                  <option value="select" <%= fieldType === "select" ? "selected" : "" %>>Select Box</option>
+                </select>
+              </div>
+            </div>
+
+            <!--div class="control-group">
+              <label class="control-label" for="choices">Choice</label>
+              <div class="controls choices">
+                <% if( choices.length > 1) { 
+                  _.each(choices,function(choice){ %>
+                       <input type="text" class="choice<%= choice.value %>" id="<%= choice.value %>" name="choices"  value="<%= choice.text %>">&nbsp;<button id="<%= choice.value %>" type="button" class="btn btn-small remove-choice"><i id="<%= choice.value %>" class="icon-remove-circle"></i></button><p></p>
+                      <% })
+                      } else { %>
+                      <input type="text" class="choice0" id="0" name="choices"  value="<%= choices[0].text %>">
+                      <% } %>
+                <span><button id="add-choice" type="button" class="btn btn-small add-choice">Add</button></span>
+              </div>
+            </div-->
+
+            <div class="control-group">
+              <label class="control-label" for="inputRequire">Require</label>    
+              <div class="controls require">
+                <label class="checkbox">
+                  <input id="require" name="require" type="checkbox" value="true" <%= require === true ? "checked" : ""%>>
+                </label>
+                <button type="button" class="btn btn-primary done">Done</button>
+              </div>
+            </div>
+        </form>           
+  </div>
+</div>
+<div class="topright-actions">
+  <span><button id="closeEditItem" type="button" class="btn btn-small" data-toggle="modal"><i class="icon-edit"></i></button ></span>
+  <span><button id="duplicateItem" class="btn btn-small" type="button"><i class="icon-plus"></i></button></span>
+  <span><button id="removeItem" class="btn btn-small" type="button"><i class="icon-trash"></i></button></span>
+</div>        
+</script>
+<!-- script file adding start -->
+<!-- load lib -->
+<script src="js/libs/jquery.js"></script>
+<script src="js/libs/underscore.js"></script>
+<script src="js/libs/backbone.js"></script>
+<script src="js/libs/backbone.localStorage.js"></script>
+<!-- drag n drop -->
+<script src="js/libs/jquery.drag-drop.plugin.js"></script>
+
+<!--Backbone.DragDrop-->
+<script src="js/libs/backbone.dragdrop.js"></script>
+
+<!-- bootstrap -->
+<script src="assets/js/bootstrap.min.js"></script>
+<script src="assets/js/bootstrap-editable.min.js"></script>
+
+
+
+<!-- load resource -->
+<script src="js/app.js"></script>
+<!-- Backbone Model -->
+<script src="js/models/item.js"></script>
+<!-- Backbone Collection -->
+<script src="js/collections/items.js"></script>
+<!-- Backbone View -->
+<script src="js/views/AddEditItemView.js"></script>
+<script src="js/views/ItemView.js"></script>
+<script src="js/views/ItemListView.js"></script>
+
+<!--script src="js/views/DragDropElementView.js"></script-->
+<!--script src="js/views/DragDropView.js"></script-->
+
+
+<!-- script file adding end -->
+  </body>
+</html>
